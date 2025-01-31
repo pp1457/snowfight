@@ -1,6 +1,3 @@
-// ----------------------
-// game.js
-// ----------------------
 const config = {
     type: Phaser.AUTO,
     width: window.innerWidth,
@@ -47,21 +44,28 @@ function create() {
     const treeLayer = map.createLayer('Trees', tileset);
     treeLayer.setCollisionByProperty({ collides: true });
 
+    // Set world and camera bounds
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
-    player = createPlayer(this, 400, 300);
+    // Generate a random spawn position within the map bounds
+    const randomX = Phaser.Math.Between(0, map.widthInPixels);
+    const randomY = Phaser.Math.Between(0, map.heightInPixels);
+
+    // Create the player at the random position
+    player = createPlayer(this, randomX, randomY);
+
+    // Make the camera follow the player
     this.cameras.main.startFollow(player.container, true);
 
     cursors = this.input.keyboard.createCursorKeys();
     snowballs = this.physics.add.group();
 
-    // 連接到遠端伺服器（替換為你的伺服器IP）
     socket = new WebSocket('ws://localhost:12345');
     
     socket.onopen = () => {
         console.log('Connected to server');
-        player.id = Date.now().toString(); // 生成臨時ID
+        player.id = Date.now().toString();
         socket.send(JSON.stringify({
             type: 'join',
             id: player.id,
@@ -72,7 +76,6 @@ function create() {
 
     socket.onmessage = handleServerMessage.bind(this);
 
-    // UI 元素
     this.scoreText = this.add.dom(window.innerWidth - 80, 30, 'div', 
         'font-size: 16px; color: #fff; padding: 10px; background: rgba(0,0,0,0.7);',
         'Scores'
@@ -201,7 +204,6 @@ function handleServerMessage(event) {
 }
 
 function updateGameState(state) {
-    // 更新其他玩家
     Object.keys(state.players).forEach(id => {
         if (id !== player.id) {
             if (!players[id]) {
@@ -215,7 +217,6 @@ function updateGameState(state) {
         }
     });
 
-    // 移除離線玩家
     Object.keys(players).forEach(id => {
         if (!state.players[id]) {
             players[id].container.destroy();
@@ -223,7 +224,6 @@ function updateGameState(state) {
         }
     });
 
-    // 更新分數
     this.scoreText.node.innerHTML = Object.entries(state.scores)
         .sort((a, b) => b[1] - a[1])
         .map(([id, score]) => `${id}: ${score}`)
