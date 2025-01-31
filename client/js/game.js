@@ -137,20 +137,44 @@ function createPlayer(scene, x, y) {
     // Create the main player body (physics-enabled)
     const circle = scene.add.circle(0, 0, 20, 0x00ff00);
 
-    // Create the health bar (no physics, just a visual element)
-    const healthBar = scene.add.rectangle(0, -30, 40, 5, 0xff0000);
-
-    // Create a container to group them visually (container does not have physics)
-    const container = scene.add.container(x, y, [circle, healthBar]);
+    // Create a container to group the circle and health bar
+    const container = scene.add.container(x, y, [circle]);
     scene.physics.add.existing(container);
     container.body.setSize(40, 40);
-    container.body.setCollideWorldBounds(true);  // Enable world bounds collision for the circle
-    
-    return { 
-        container, // Visual grouping of circle and health bar
-        circle,    // Physics-enabled circle
-        healthBar, // Health bar UI element
-        health: 100
+    container.body.setCollideWorldBounds(true);
+
+    // Create the health bar background (gray bar)
+    const healthBarBg = scene.add.rectangle(0, -30, 40, 5, 0x555555);
+    healthBarBg.setOrigin(0.5, 0.5);
+    container.add(healthBarBg);
+
+    // Create the health bar (red initially)
+    const healthBar = scene.add.rectangle(-20, -30, 40, 5, 0xff0000);
+    healthBar.setOrigin(0, 0.5); // Align to the left
+    container.add(healthBar);
+
+    return {
+        container,  // Visual grouping of circle and health bar
+        circle,     // Physics-enabled circle
+        healthBar,  // Foreground health bar (can be resized)
+        healthBarBg, // Background of the health bar
+        health: 100,
+
+        // Method to update the health bar visually
+        updateHealth(newHealth) {
+            this.health = newHealth;
+            const healthPercentage = Math.max(newHealth / 100, 0); // Prevent negative width
+            this.healthBar.width = 40 * healthPercentage;
+
+            // Change color based on health percentage
+            if (healthPercentage > 0.5) {
+                this.healthBar.fillColor = 0x00ff00; // Green (Healthy)
+            } else if (healthPercentage > 0.25) {
+                this.healthBar.fillColor = 0xffff00; // Yellow (Medium)
+            } else {
+                this.healthBar.fillColor = 0xff0000; // Red (Critical)
+            }
+        }
     };
 }
 
@@ -301,7 +325,7 @@ function updateGameState(state) {
 
 function handleHit(data) {
     if (data.targetId === player.id) {
-        currentHealth = data.newHealth;
+        player.updateHealth(data.newHealth);
         this.cameras.main.shake(100, 0.01);
     }
 }
