@@ -76,24 +76,89 @@ function create() {
 
     socket.onmessage = handleServerMessage.bind(this);
 
-    this.scoreText = this.add.dom(window.innerWidth - 80, 30, 'div', 
-        'font-size: 16px; color: #fff; padding: 10px; background: rgba(0,0,0,0.7);',
-        'Scores'
-    ).setScrollFactor(0);
+    // Create a container for the scoreboard
+    this.scoreboard = this.add.container(window.innerWidth - 200, 20);
+
+    // Add a background rectangle
+    const bg = this.add.rectangle(0, 0, 180, 300, 0x000000, 0.7);  // Increase the height for more space
+    bg.setOrigin(0, 0);
+
+    // Add the score board title text with a custom font
+    this.scoreBoardTitle = this.add.text(10, 10, 'Score Board', {
+        fontSize: '20px',
+        color: '#ffffff',
+        fontFamily: 'Arial',  // Use Arial for the title
+        fontStyle: 'bold',
+        padding: { x: 5, y: 5 }
+    });
+
+    // Add the user scores text with a different font
+    this.userScoresText = this.add.text(10, 50, '', {
+        fontSize: '16px',
+        color: '#ffffff',
+        fontFamily: 'Courier New',  // Use Courier New for the scores
+        padding: { x: 5, y: 5 }
+    });
+
+    // Ensure both texts are clear with better anti-aliasing
+    this.scoreBoardTitle.setResolution(5);
+    this.userScoresText.setResolution(5);
+
+    // Add both elements to the container
+    this.scoreboard.add([bg, this.scoreBoardTitle, this.userScoresText]);
+
+    // Make sure the scoreboard stays fixed on the screen
+    this.scoreboard.setScrollFactor(0);
 
     this.input.on('pointerdown', startCharging, this);
     this.input.on('pointerup', fireSnowball, this);
+
+    const mockState = {
+        players: {
+            'player1': { x: 100, y: 150 },
+            'player2': { x: 200, y: 250 },
+            'player3': { x: 300, y: 350 }
+        },
+        scores: {
+            'player1': 10,
+            'player2': 20,
+            'player3': 30
+        }
+    };
+
+    updateGameState.call(this, mockState);
 }
 
 function anyKeyIsDown(keys) {
     return keys.some(key => key.isDown);
 }
 
+function createPlayer(scene, x, y) {
+    // Create the main player body (physics-enabled)
+    const circle = scene.add.circle(0, 0, 20, 0x00ff00);
+
+    // Create the health bar (no physics, just a visual element)
+    const healthBar = scene.add.rectangle(0, -30, 40, 5, 0xff0000);
+
+    // Create a container to group them visually (container does not have physics)
+    const container = scene.add.container(x, y, [circle, healthBar]);
+    scene.physics.add.existing(container);
+    container.body.setSize(40, 40);
+    container.body.setCollideWorldBounds(true);  // Enable world bounds collision for the circle
+    
+    return { 
+        container, // Visual grouping of circle and health bar
+        circle,    // Physics-enabled circle
+        healthBar, // Health bar UI element
+        health: 100
+    };
+}
+
 function update() {
     if (!isAlive) return;
 
     const speed = 200;
-    player.container.body.setVelocity(0);
+    player.container.body.setVelocity(0); // Reset velocity
 
     // Define movement keys
     const leftKeys = [cursors.left, this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A)];
@@ -101,46 +166,43 @@ function update() {
     const upKeys = [cursors.up, this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W)];
     const downKeys = [cursors.down, this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S)];
 
-    // Check for movement input
+    let velocityX = 0;
+    let velocityY = 0;
+
+    // Apply movement based on key input
     if (anyKeyIsDown(leftKeys)) {
-        player.container.body.setVelocityX(-speed);
+        velocityX = -speed;
     } else if (anyKeyIsDown(rightKeys)) {
-        player.container.body.setVelocityX(speed);
+        velocityX = speed;
     }
 
     if (anyKeyIsDown(upKeys)) {
-        player.container.body.setVelocityY(-speed);
+        velocityY = -speed;
     } else if (anyKeyIsDown(downKeys)) {
-        player.container.body.setVelocityY(speed);
+        velocityY = speed;
     }
+
+    // Normalize the velocity to avoid diagonal speed boost
+    if (velocityX !== 0 && velocityY !== 0) {
+        const magnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
+        velocityX /= magnitude;
+        velocityY /= magnitude;
+        velocityX *= speed;
+        velocityY *= speed;
+    }
+
+    // Apply the velocity to the container
+    player.container.body.setVelocity(velocityX, velocityY);
 
     // Send position update to server
     if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
             type: 'move',
             id: player.id,
-            x: player.container.x,
+            x: player.container.x, // Use the container's correct position
             y: player.container.y
         }));
     }
-}
-
-function createPlayer(scene, x, y) {
-    const circle = scene.add.circle(0, 0, 20, 0x00ff00);
-    scene.physics.add.existing(circle);
-    circle.body.setCollideWorldBounds(true);
-
-    const healthBar = scene.add.rectangle(0, -30, 40, 5, 0xff0000);
-
-    const container = scene.add.container(x, y, [circle, healthBar]);
-    scene.physics.add.existing(container);
-    container.body.setSize(40, 40);
-
-    return { 
-        container,
-        id: '',
-        health: 100
-    };
 }
 
 function startCharging() {
@@ -224,10 +286,17 @@ function updateGameState(state) {
         }
     });
 
-    this.scoreText.node.innerHTML = Object.entries(state.scores)
-        .sort((a, b) => b[1] - a[1])
-        .map(([id, score]) => `${id}: ${score}`)
-        .join('<br>');
+    const sortedScores = Object.entries(state.scores)
+        .sort((a, b) => b[1] - a[1])  // Sort scores in descending order
+        .slice(0, 10);  // Take only the top 10 players
+
+    // Create the score list as a string
+    const scoreList = sortedScores.map(([id, score], index) => {
+        return `${index + 1}. ${id} ${score}`;  // Format as "1. player_id: score"
+    }).join('\n');  // Join the list into a multiline string
+
+    // Update the user scores text to show the top 10 scores
+    this.userScoresText.setText(scoreList);  // Set the text of the userScoresText object
 }
 
 function handleHit(data) {
