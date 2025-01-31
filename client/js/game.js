@@ -113,20 +113,20 @@ function create() {
     this.input.on('pointerdown', startCharging, this);
     this.input.on('pointerup', fireSnowball, this);
 
-    const mockState = {
-        players: {
-            'player1': { x: 100, y: 150 },
-            'player2': { x: 200, y: 250 },
-            'player3': { x: 300, y: 350 }
-        },
-        scores: {
-            'player1': 10,
-            'player2': 20,
-            'player3': 30
-        }
-    };
+    // const mockState = {
+    //     players: {
+    //         'player1': { x: 100, y: 150 },
+    //         'player2': { x: 200, y: 250 },
+    //         'player3': { x: 300, y: 350 }
+    //     },
+    //     scores: {
+    //         'player1': 10,
+    //         'player2': 20,
+    //         'player3': 30
+    //     }
+    // };
 
-    updateGameState.call(this, mockState);
+    // updateGameState.call(this, mockState);
 }
 
 function anyKeyIsDown(keys) {
