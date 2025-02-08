@@ -35,6 +35,7 @@ let isAlive = true;
 function preload() {
     this.load.image('tiles', 'assets/tiny-ski.png');
     this.load.tilemapTiledJSON('map', 'assets/tiny-ski.tmj');
+    // We no longer load a snowball sprite; we use a black circle instead.
 }
 
 function create() {
@@ -61,10 +62,12 @@ function create() {
     cursors = this.input.keyboard.createCursorKeys();
     snowballs = this.physics.add.group();
 
+    // Connect to the server via WebSocket
     socket = new WebSocket('ws://localhost:12345');
     
     socket.onopen = () => {
         console.log('Connected to server');
+        // Give the player a unique ID (using timestamp for simplicity)
         player.id = Date.now().toString();
         socket.send(JSON.stringify({
             type: 'join',
@@ -74,59 +77,46 @@ function create() {
         }));
     };
 
+    // Handle messages from the server
     socket.onmessage = handleServerMessage.bind(this);
 
     // Create a container for the scoreboard
     this.scoreboard = this.add.container(window.innerWidth - 200, 20);
 
-    // Add a background rectangle
-    const bg = this.add.rectangle(0, 0, 180, 300, 0x000000, 0.7);  // Increase the height for more space
+    // Add a background rectangle for the scoreboard
+    const bg = this.add.rectangle(0, 0, 180, 300, 0x000000, 0.7);
     bg.setOrigin(0, 0);
 
-    // Add the score board title text with a custom font
+    // Add the score board title text
     this.scoreBoardTitle = this.add.text(10, 10, 'Score Board', {
         fontSize: '20px',
         color: '#ffffff',
-        fontFamily: 'Arial',  // Use Arial for the title
+        fontFamily: 'Arial',
         fontStyle: 'bold',
         padding: { x: 5, y: 5 }
     });
 
-    // Add the user scores text with a different font
+    // Add the user scores text
     this.userScoresText = this.add.text(10, 50, '', {
         fontSize: '16px',
         color: '#ffffff',
-        fontFamily: 'Courier New',  // Use Courier New for the scores
+        fontFamily: 'Courier New',
         padding: { x: 5, y: 5 }
     });
 
-    // Ensure both texts are clear with better anti-aliasing
+    // Improve text resolution for better clarity
     this.scoreBoardTitle.setResolution(5);
     this.userScoresText.setResolution(5);
 
-    // Add both elements to the container
+    // Add both elements to the scoreboard container
     this.scoreboard.add([bg, this.scoreBoardTitle, this.userScoresText]);
 
     // Make sure the scoreboard stays fixed on the screen
     this.scoreboard.setScrollFactor(0);
 
+    // Input events for charging and firing snowballs
     this.input.on('pointerdown', startCharging, this);
     this.input.on('pointerup', fireSnowball, this);
-
-    // const mockState = {
-    //     players: {
-    //         'player1': { x: 100, y: 150 },
-    //         'player2': { x: 200, y: 250 },
-    //         'player3': { x: 300, y: 350 }
-    //     },
-    //     scores: {
-    //         'player1': 10,
-    //         'player2': 20,
-    //         'player3': 30
-    //     }
-    // };
-
-    // updateGameState.call(this, mockState);
 }
 
 function anyKeyIsDown(keys) {
@@ -134,57 +124,69 @@ function anyKeyIsDown(keys) {
 }
 
 function createPlayer(scene, x, y) {
-    // Create the main player body (physics-enabled)
+    // Create the main player body (a green circle)
     const circle = scene.add.circle(0, 0, 20, 0x00ff00);
 
-    // Create a container to group the circle and health bar
+    // Create a container to group the circle and the health bar
     const container = scene.add.container(x, y, [circle]);
     scene.physics.add.existing(container);
     container.body.setSize(40, 40);
     container.body.setCollideWorldBounds(true);
 
-    // Create the health bar background (gray bar)
+    // Create the health bar background (gray)
     const healthBarBg = scene.add.rectangle(0, -30, 40, 5, 0x555555);
     healthBarBg.setOrigin(0.5, 0.5);
     container.add(healthBarBg);
 
     // Create the health bar (red initially)
     const healthBar = scene.add.rectangle(-20, -30, 40, 5, 0xff0000);
-    healthBar.setOrigin(0, 0.5); // Align to the left
+    healthBar.setOrigin(0, 0.5);
     container.add(healthBar);
 
     return {
-        container,  // Visual grouping of circle and health bar
-        circle,     // Physics-enabled circle
-        healthBar,  // Foreground health bar (can be resized)
-        healthBarBg, // Background of the health bar
+        container,   // Grouped container for the player
+        circle,      // Visual representation (circle)
+        healthBar,   // Foreground health bar
+        healthBarBg, // Health bar background
         health: 100,
 
-        // Method to update the health bar visually
+        // Update the health bar based on new health
         updateHealth(newHealth) {
             this.health = newHealth;
-            const healthPercentage = Math.max(newHealth / 100, 0); // Prevent negative width
+            const healthPercentage = Math.max(newHealth / 100, 0);
             this.healthBar.width = 40 * healthPercentage;
-
-            // Change color based on health percentage
             if (healthPercentage > 0.5) {
-                this.healthBar.fillColor = 0x00ff00; // Green (Healthy)
+                this.healthBar.fillColor = 0x00ff00; // Green
             } else if (healthPercentage > 0.25) {
-                this.healthBar.fillColor = 0xffff00; // Yellow (Medium)
+                this.healthBar.fillColor = 0xffff00; // Yellow
             } else {
-                this.healthBar.fillColor = 0xff0000; // Red (Critical)
+                this.healthBar.fillColor = 0xff0000; // Red
             }
         }
     };
+}
+
+// Helper function to create a snowball as a black circle
+function createSnowball(scene, x, y, radius = 10) {
+    // Create a black circle to represent the snowball
+    const circle = scene.add.circle(x, y, radius, 0x000000);
+    // Enable physics on the circle
+    scene.physics.add.existing(circle);
+    // Set a circular physics body for accurate collisions
+    circle.body.setCircle(radius);
+    // Add the snowball to the group
+    snowballs.add(circle);
+    return circle;
 }
 
 function update() {
     if (!isAlive) return;
 
     const speed = 200;
-    player.container.body.setVelocity(0); // Reset velocity
+    // Reset the player's velocity
+    player.container.body.setVelocity(0);
 
-    // Define movement keys
+    // Define movement keys (WASD and arrow keys)
     const leftKeys = [cursors.left, this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A)];
     const rightKeys = [cursors.right, this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)];
     const upKeys = [cursors.up, this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W)];
@@ -193,40 +195,86 @@ function update() {
     let velocityX = 0;
     let velocityY = 0;
 
-    // Apply movement based on key input
+    // Determine horizontal movement
     if (anyKeyIsDown(leftKeys)) {
         velocityX = -speed;
     } else if (anyKeyIsDown(rightKeys)) {
         velocityX = speed;
     }
 
+    // Determine vertical movement
     if (anyKeyIsDown(upKeys)) {
         velocityY = -speed;
     } else if (anyKeyIsDown(downKeys)) {
         velocityY = speed;
     }
 
-    // Normalize the velocity to avoid diagonal speed boost
+    // Normalize diagonal movement to maintain constant speed
     if (velocityX !== 0 && velocityY !== 0) {
         const magnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
-        velocityX /= magnitude;
-        velocityY /= magnitude;
-        velocityX *= speed;
-        velocityY *= speed;
+        velocityX = (velocityX / magnitude) * speed;
+        velocityY = (velocityY / magnitude) * speed;
     }
 
-    // Apply the velocity to the container
+    // Apply velocity to the player's physics body
     player.container.body.setVelocity(velocityX, velocityY);
 
-    // Send position update to server
-    if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
+    // Send a position update to the server if the position has changed significantly
+    if (!this.lastSentPosition) {
+        this.lastSentPosition = { x: player.container.x, y: player.container.y };
+    }
+    const posChanged = (Math.abs(player.container.x - this.lastSentPosition.x) > 0.5 ||
+                        Math.abs(player.container.y - this.lastSentPosition.y) > 0.5);
+    if (posChanged && socket.readyState === WebSocket.OPEN) {
+        const updateMsg = {
             type: 'move',
             id: player.id,
-            x: player.container.x, // Use the container's correct position
-            y: player.container.y
-        }));
+            x: player.container.x,
+            y: player.container.y,
+            vx: velocityX,
+            vy: velocityY,
+            t: Date.now()  // Timestamp (ms) for lag compensation
+        };
+        socket.send(JSON.stringify(updateMsg));
+        this.lastSentPosition = { x: player.container.x, y: player.container.y };
     }
+
+    // --- Update Charging Indicator ---
+    // If the player is charging a snowball, update its position and size based on pointer direction and charge time.
+    if (isCharging && player.chargingSnowball) {
+        const pointer = this.input.activePointer;
+        const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const direction = new Phaser.Math.Vector2(worldPoint.x - player.container.x, worldPoint.y - player.container.y).normalize();
+        player.chargingDirection = direction;
+        const offsetDistance = 30;
+        // Position the charging indicator in front of the player along the current direction.
+        player.chargingSnowball.setPosition(
+            player.container.x + direction.x * offsetDistance,
+            player.container.y + direction.y * offsetDistance
+        );
+        // Increase the size (scale) of the indicator over time.
+        const chargeTime = this.time.now - chargeStartTime;
+        const maxCharge = 2000; // Maximum charge time in ms.
+        const initialRadius = 5;
+        const maxRadius = 20;   // Maximum radius for the charging ball.
+        const newRadius = Phaser.Math.Linear(initialRadius, maxRadius, Math.min(chargeTime / maxCharge, 1));
+        // Since our circle was originally created with a radius of 5, adjust its scale accordingly.
+        player.chargingSnowball.setScale(newRadius / initialRadius);
+    }
+
+    // --- Snowball Updates ---
+    // Phaser's Arcade Physics automatically updates each snowball's position based on its velocity.
+    // Optionally, gently interpolate any drift toward the last known server position.
+    snowballs.getChildren().forEach(snowball => {
+        if (snowball.lastKnownPosition) {
+            const dx = snowball.lastKnownPosition.x - snowball.x;
+            const dy = snowball.lastKnownPosition.y - snowball.y;
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                snowball.x = Phaser.Math.Linear(snowball.x, snowball.lastKnownPosition.x, 0.1);
+                snowball.y = Phaser.Math.Linear(snowball.y, snowball.lastKnownPosition.y, 0.1);
+            }
+        }
+    });
 }
 
 function startCharging() {
@@ -234,12 +282,19 @@ function startCharging() {
     
     isCharging = true;
     chargeStartTime = this.time.now;
+    // Get the initial pointer position and compute the direction from the player.
+    const pointer = this.input.activePointer;
+    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const direction = new Phaser.Math.Vector2(worldPoint.x - player.container.x, worldPoint.y - player.container.y).normalize();
+    player.chargingDirection = direction;
+    const offsetDistance = 30;
+    // Create a black circle as the charging indicator in front of the player.
     player.chargingSnowball = this.add.circle(
-        player.container.x,
-        player.container.y,
-        5,
-        0xffffff
-    ).setAlpha(0.7);
+        player.container.x + direction.x * offsetDistance,
+        player.container.y + direction.y * offsetDistance,
+        5, // initial radius
+        0x000000
+    ).setAlpha(0.8);
 }
 
 function fireSnowball(pointer) {
@@ -247,35 +302,76 @@ function fireSnowball(pointer) {
 
     const chargeTime = this.time.now - chargeStartTime;
     const maxCharge = 2000;
-    const radius = 5 + (Math.min(chargeTime, maxCharge) / maxCharge) * 15;
+    const initialRadius = 5;
+    const maxRadius = 20;
+    // Determine the final radius of the snowball based on charge time.
+    const finalRadius = Phaser.Math.Linear(initialRadius, maxRadius, Math.min(chargeTime / maxCharge, 1));
     
-    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const direction = new Phaser.Math.Vector2(
-        worldPoint.x - player.container.x,
-        worldPoint.y - player.container.y
-    ).normalize();
-
+    // Use the stored charging direction.
+    const direction = player.chargingDirection || new Phaser.Math.Vector2(1, 0);
+    
+    // Fire from the position of the charging indicator (not from the player's center).
+    const fireX = player.chargingSnowball.x;
+    const fireY = player.chargingSnowball.y;
+    
+    // Send the fire message to the server.
     if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
             type: 'fire',
             id: player.id,
-            x: player.container.x,
-            y: player.container.y,
+            x: fireX,
+            y: fireY,
             direction: { x: direction.x, y: direction.y },
-            radius: radius
+            radius: finalRadius
         }));
     }
-
+    
+    // Create a local snowball at the charging indicator's position.
+    const snowballSpeed = 500;
+    const localSnowball = createSnowball(this, fireX, fireY, finalRadius);
+    localSnowball.id = 'local_' + Date.now(); // Temporary ID; ideally, the server provides one.
+    localSnowball.body.setVelocity(direction.x * snowballSpeed, direction.y * snowballSpeed);
+    
+    // Remove the charging indicator and reset the charging state.
     player.chargingSnowball.destroy();
+    player.chargingSnowball = null;
     isCharging = false;
 }
 
+// --- Snowball Update Functions ---
+
+// Update or create a snowball based on data received from the server.
+function updateSnowballFromServer(snowball, updateData) {
+    // Set the snowball's position directly.
+    snowball.setPosition(updateData.x, updateData.y);
+    
+    // Set its velocity using Phaser's native physics function.
+    if (snowball.body) {
+        snowball.body.setVelocity(updateData.vx, updateData.vy);
+    }
+    
+    // Optionally store the last update time and position for drift correction.
+    snowball.lastUpdate = updateData.t || Date.now();
+    snowball.lastKnownPosition = { x: updateData.x, y: updateData.y };
+}
+
+// Handle messages from the server.
 function handleServerMessage(event) {
     const data = JSON.parse(event.data);
     
     switch(data.type) {
         case 'update':
             updateGameState.call(this, data.state);
+            break;
+        case 'snowball_update':
+            // Data should include: snowballId, x, y, vx, vy, and t.
+            let snowball = snowballs.getChildren().find(s => s.id === data.snowballId);
+            if (!snowball) {
+                // Create a new snowball as a black circle.
+                snowball = createSnowball(this, data.x, data.y, 10);
+                snowball.id = data.snowballId;
+            }
+            updateSnowballFromServer(snowball, data);
             break;
         case 'hit':
             handleHit.call(this, data);
@@ -286,6 +382,8 @@ function handleServerMessage(event) {
         case 'respawn':
             handleRespawn.call(this, data);
             break;
+        default:
+            console.log('Unknown message type:', data.type);
     }
 }
 
@@ -311,16 +409,14 @@ function updateGameState(state) {
     });
 
     const sortedScores = Object.entries(state.scores)
-        .sort((a, b) => b[1] - a[1])  // Sort scores in descending order
-        .slice(0, 10);  // Take only the top 10 players
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
 
-    // Create the score list as a string
     const scoreList = sortedScores.map(([id, score], index) => {
-        return `${index + 1}. ${id} ${score}`;  // Format as "1. player_id: score"
-    }).join('\n');  // Join the list into a multiline string
+        return `${index + 1}. ${id} ${score}`;
+    }).join('\n');
 
-    // Update the user scores text to show the top 10 scores
-    this.userScoresText.setText(scoreList);  // Set the text of the userScoresText object
+    this.userScoresText.setText(scoreList);
 }
 
 function handleHit(data) {
@@ -354,5 +450,8 @@ function handleRespawn(data) {
 
 window.addEventListener('resize', () => {
     game.scale.resize(window.innerWidth, window.innerHeight);
-    game.scene.scenes[0].scoreText.setPosition(window.innerWidth - 80, 30);
+    // Adjust scoreboard position if needed:
+    if (game.scene.scenes[0].scoreText) {
+        game.scene.scenes[0].scoreText.setPosition(window.innerWidth - 80, 30);
+    }
 });
