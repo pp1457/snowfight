@@ -4,8 +4,8 @@ LDFLAGS = -L/usr/local/lib
 LIBS = -luSockets -lssl -lz -lcrypto -lpthread
 
 # Final build target
-my_program: src/main.o
-	$(CC) $(CFLAGS) src/main.o $(LDFLAGS) $(LIBS) -o my_program
+server: src/main.o
+	$(CC) $(CFLAGS) src/main.o $(LDFLAGS) $(LIBS) -o server
 
 # Rule to compile source code
 src/main.o: src/main.cpp
@@ -13,4 +13,4 @@ src/main.o: src/main.cpp
 
 # Clean build files
 clean:
-	rm -f src/*.o my_program
+	rm -f src/*.o server

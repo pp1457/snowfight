@@ -1,22 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phaser 3 Game</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.87.0/phaser.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-        canvas {
-            display: block;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phaser Game with HTML Scoreboard</title>
+  <!-- Load Phaser from CDN using the minified version with correct integrity hash -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.87.0/phaser.js"></script>
+  <style>
+    /* Ensure the game container fills the screen */
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    /* Scoreboard styling */
+    #scoreboard {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 200px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      z-index: 1000; /* Ensure it stays above the canvas */
+    }
+    #scoreboard h3 {
+      margin: 0 0 10px;
+      font-size: 20px;
+    }
+    #scoreboard pre {
+      margin: 0;
+      font-size: 16px;
+    }
+  </style>
 </head>
 <body>
-    <script src="js/game.js"></script>
+  <!-- This div is where Phaser will create the canvas -->
+  <div id="game-container"></div>
+  <!-- HTML Scoreboard -->
+  <div id="scoreboard">
+    <h3>Score Board</h3>
+    <pre id="scoreboard-scores"></pre>
+  </div>
+  <script src="js/game.js"></script>
 </body>
 </html>
