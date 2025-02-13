@@ -28,6 +28,7 @@ export function handleServerMessage(event) {
   switch (data.type) {
     case "movement":
       // Use the unified update function.
+      console.log("hi");  
       updateGameObject(this, data);
       break;
     case "hit":

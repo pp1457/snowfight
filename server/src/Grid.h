@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-#include "GameObject.h"
+#include "game_object.h"
 
 struct Cell {
     std::unordered_set<std::shared_ptr<GameObject>> objects;
@@ -23,20 +23,18 @@ class Grid {
 
 private:
     int height_, width_;
-    int rows_, cols_;
     int cell_size_;
+    int rows_, cols_;
     std::vector<std::vector<Cell>> cells_;
 
 public:
-    Grid(int height, int width, int cell_size)
-        : height_(height), width_(width), cell_size_(cell_size),
-          rows_((height - 1) / cell_size + 1), cols_((width - 1) / cell_size + 1),
-          cells_(rows_, std::vector<Cell>(cols_)) {}
+    Grid(int height, int width, int cell_size);
 
     ~Grid();
 
     void Insert(std::shared_ptr<GameObject> obj);
     void Remove(std::shared_ptr<GameObject> obj);
+    void Update(std::shared_ptr<GameObject> obj, double old_x, double old_y);
 
     std::vector<std::shared_ptr<GameObject>> Search(double lower_y, double upper_y, double left_x, double right_x);
 };

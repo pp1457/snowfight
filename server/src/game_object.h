@@ -2,24 +2,26 @@
 #define GAME_OBJECT_H
 
 #include <string>
-#include <nlohmann/json.hpp>
 #include <uWebSockets/App.h>
+
+#include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
 
 class GameObject {
-    std::string type_;
-    unsigned long long id_;
+    std::string type_, id_;
     double x_, y_, vx_, vy_, size_;
     int row_, col_;
 
 public:
-    GameObject(unsigned long long id, std::string type)
-        : id_(id), type_(std::move(type)), x_(0), y_(0), vx_(0), vy_(0), size_(1), row_(0), col_(0) {}
+    GameObject() {}
+
+    GameObject(std::string id, std::string type)
+        : type_(std::move(type)), id_(std::move(id)), x_(0), y_(0), vx_(0), vy_(0), size_(1), row_(0), col_(0) {}
 
     // Getters
     std::string get_type() const { return type_; }
-    unsigned long long get_id() const { return id_; }
+    std::string get_id() const { return id_; }
     double get_x() const { return x_; }
     double get_y() const { return y_; }
     double get_vx() const { return vx_; }
@@ -29,6 +31,8 @@ public:
     int get_col() const { return col_; }
 
     // Setters
+    void set_type(std::string type) { type_ = type; }
+    void set_id(std::string id) { id_ = id; }
     void set_x(double x) { x_ = x; }
     void set_y(double y) { y_ = y; }
     void set_vx(double vx) { vx_ = vx; }
@@ -37,7 +41,7 @@ public:
     void set_row(int row) { row_ = row; }
     void set_col(int col) { col_ = col; }
 
-    bool Collide(const GameObject &obj) const {
+    bool Collide(std::shared_ptr<GameObject> obj) {
         return false;
 //         double dx = x_ - obj.x_;
 //         double dy = y_ - obj.y_;
@@ -55,15 +59,17 @@ public:
             {"size", size_}
         };
 
-        ws->send(data.dump(), uWS::OpCode::Text);
+        ws->send(data.dump(), uWS::OpCode::TEXT);
     }
 };
 
 
-class Player : GameObject {
+class Player : public GameObject {
 
-private:
-    
+public:
+    Player() {
+
+    }
 
 };
 #endif

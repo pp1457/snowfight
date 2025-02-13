@@ -8,8 +8,8 @@ Grid::Grid(int height, int width, int cell_size)
 Grid::~Grid() {}
 
 void Grid::Insert(std::shared_ptr<GameObject> obj) {
-    int row = static_cast<int>(obj->get_y() / cell_size_);
-    int col = static_cast<int>(obj->get_x() / cell_size_);
+    int row = static_cast<int>(obj->get_y()) / cell_size_;
+    int col = static_cast<int>(obj->get_x()) / cell_size_;
 
     if (row >= rows_ || col >= cols_ || row < 0 || col < 0) return;
 
@@ -28,6 +28,22 @@ void Grid::Remove(std::shared_ptr<GameObject> obj) {
 
     cells_[row][col].Insert(obj);
 }
+
+void Grid::Update(std::shared_ptr<GameObject> obj, double old_x, double old_y) {
+    int old_row = static_cast<int>(old_y) / cell_size_;
+    int old_col = static_cast<int>(old_x) / cell_size_;
+    int new_row = static_cast<int>(obj->get_y()) / cell_size_;
+    int new_col = static_cast<int>(obj->get_x()) / cell_size_;
+
+    if (old_row != new_row || old_col != new_col) {
+        obj->set_row(new_row);
+        obj->set_col(new_col);
+        cells_[old_row][old_col].Remove(obj);
+        cells_[new_row][new_col].Insert(obj);
+        std::cout << "Insert in " << new_row << " row " << new_col << " col\n";
+    }
+}
+
 
 std::vector<std::shared_ptr<GameObject>> Grid::Search(double lower_y, double upper_y, 
                                                       double left_x, double right_x) { 

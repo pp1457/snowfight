@@ -1,16 +1,41 @@
+# Compiler and flags
 CC = clang++
-CFLAGS = -Iinclude -I/usr/local/include -std=c++20
+CFLAGS = -Iinclude -I/usr/local/include -std=c++20 -Wall -Wextra -O2
 LDFLAGS = -L/usr/local/lib
 LIBS = -luSockets -lssl -lz -lcrypto -lpthread
 
-# Final build target
-server: src/main.o
-	$(CC) $(CFLAGS) src/main.o $(LDFLAGS) $(LIBS) -o server
+# Directories
+SRC_DIR = src
+BUILD_DIR = build
 
-# Rule to compile source code
-src/main.o: src/main.cpp
-	$(CC) $(CFLAGS) -c src/main.cpp -o src/main.o
+# Find all source files and corresponding object files
+SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
+
+# Final executable
+TARGET = server
+
+# Default target
+all: $(TARGET)
+
+# Link the final binary
+$(TARGET): $(OBJ_FILES)
+	$(CC) $(CFLAGS) $(OBJ_FILES) $(LDFLAGS) $(LIBS) -o $(TARGET)
+
+# Compile each source file
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Ensure the build directory exists
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
 # Clean build files
 clean:
-	rm -f src/*.o server
+	rm -rf $(BUILD_DIR) $(TARGET)
+
+# Run the server
+run: all
+	./$(TARGET)
+
+.PHONY: all clean run
