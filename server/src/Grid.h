@@ -13,6 +13,10 @@ struct Cell {
     void Insert(std::shared_ptr<GameObject> obj) {
         objects.insert(obj);
     }
+
+    void Remove(std::shared_ptr<GameObject> obj) {
+        objects.erase(obj);
+    }
 };
 
 class Grid {

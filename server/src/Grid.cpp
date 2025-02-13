@@ -13,6 +13,19 @@ void Grid::Insert(std::shared_ptr<GameObject> obj) {
 
     if (row >= rows_ || col >= cols_ || row < 0 || col < 0) return;
 
+    obj->set_row(row);
+    obj->set_col(col);
+
+    cells_[row][col].Remove(obj);
+}
+
+
+void Grid::Remove(std::shared_ptr<GameObject> obj) {
+    int row = obj->get_row();
+    int col = obj->get_col();
+
+    if (row >= rows_ || col >= cols_ || row < 0 || col < 0) return;
+
     cells_[row][col].Insert(obj);
 }
 

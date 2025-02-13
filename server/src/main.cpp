@@ -40,7 +40,7 @@ void UpdatePlayerView(auto *ws) {
     // Search for objects within the player's view
     for (auto obj : grid->Search(lower_y, upper_y, left_x, right_x)) {
         if (!obj->Collide(player)) {
-            obj->SendMovementData(ws);
+            obj->SendMovementToClient(ws);
         }
     }
 }
@@ -88,7 +88,7 @@ void StartServer(int port, int thread_id) {
             // std::cout << "Updating player view for a client." << std::endl;
             UpdatePlayerView(ws); // Add your custom logic here
         }
-    }, 10, 1000); // 8 milliseconds
+    }, 10, 20); // 8 milliseconds
 
     // Run the app
     app.run();
