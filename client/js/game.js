@@ -11,7 +11,7 @@ const PLAYER_SIZE = 40;
 const SNOWBALL_SPEED = 500;
 const DRIFT_THRESHOLD = 1;
 const DRIFT_LERP_FACTOR = 0.1;
-const FIXED_VIEW_WIDTH = 1200;
+const FIXED_VIEW_WIDTH = 1600;
 const FIXED_VIEW_HEIGHT = 900;
 
 let player, players = {}, cursors, socket, snowballs;
