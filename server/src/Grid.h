@@ -3,6 +3,7 @@
 
 #include <unordered_set>
 #include <memory>
+#include <vector>
 
 #include "GameObject.h"
 
@@ -26,14 +27,14 @@ public:
     Grid(int height, int width, int cell_size)
         : height_(height), width_(width), cell_size_(cell_size),
           rows_((height - 1) / cell_size + 1), cols_((width - 1) / cell_size + 1),
-          cells_(rows, std::vector<Cell>(cols)) {}
+          cells_(rows_, std::vector<Cell>(cols_)) {}
 
     ~Grid();
 
-    void Insert(std::shared_ptr<GameObject> obj, double row_coord, double col_coord);
+    void Insert(std::shared_ptr<GameObject> obj);
+    void Remove(std::shared_ptr<GameObject> obj);
 
-    std::vector<std::shared_ptr<GameObject>> Search(double lower_row_coord, double upper_row_coord, double left_col_coord, double right_col_coord);
-
+    std::vector<std::shared_ptr<GameObject>> Search(double lower_y, double upper_y, double left_x, double right_x);
 };
 
 #endif

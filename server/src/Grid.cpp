@@ -1,4 +1,4 @@
-#include "Grid.h"
+#include "grid.h"
 
 Grid::Grid(int height, int width, int cell_size)
     : height_(height), width_(width), cell_size_(cell_size),
@@ -7,26 +7,26 @@ Grid::Grid(int height, int width, int cell_size)
 
 Grid::~Grid() {}
 
-void Grid::Insert(std::shared_ptr<GameObject> obj, double row_coord, double col_coord) {
-    int row_index = static_cast<int>(row_coord / cell_size_);
-    int col_index = static_cast<int>(col_coord / cell_size_);
+void Grid::Insert(std::shared_ptr<GameObject> obj) {
+    int row = static_cast<int>(obj->get_y() / cell_size_);
+    int col = static_cast<int>(obj->get_x() / cell_size_);
 
-    if (row_index >= rows_ || col_index >= cols_ || row_index < 0 || col_index < 0) return;
+    if (row >= rows_ || col >= cols_ || row < 0 || col < 0) return;
 
-    cells_[row_index][col_index].Insert(obj);
+    cells_[row][col].Insert(obj);
 }
 
-std::vector<std::shared_ptr<GameObject>> Grid::Search(double lower_row_coord, double upper_row_coord, 
-                                                      double left_col_coord, double right_col_coord) { 
-    int lower_row_index = static_cast<int>(lower_row_coord) / cell_size_;
-    int upper_row_index = static_cast<int>(upper_row_coord) / cell_size_;
-    int left_col_index = static_cast<int>(left_col_coord) / cell_size_;
-    int right_col_index = static_cast<int>(right_col_coord) / cell_size_;
+std::vector<std::shared_ptr<GameObject>> Grid::Search(double lower_y, double upper_y, 
+                                                      double left_x, double right_x) { 
+    int lower_row = static_cast<int>(lower_y) / cell_size_;
+    int upper_row = static_cast<int>(upper_y) / cell_size_;
+    int left_col = static_cast<int>(left_x) / cell_size_;
+    int right_col = static_cast<int>(right_x) / cell_size_;
 
     std::vector<std::shared_ptr<GameObject>> all;
 
-    for (int r = lower_row_index; r <= upper_row_index; r++) {
-        for (int c = left_col_index; c <= right_col_index; c++) {
+    for (int r = lower_row; r <= upper_row; r++) {
+        for (int c = left_col; c <= right_col; c++) {
             if (r >= rows_ || c >= cols_ || r < 0 || c < 0) continue;  // Boundary check
             auto& cell_objs = cells_[r][c].objects;
             all.insert(all.end(), cell_objs.begin(), cell_objs.end());
