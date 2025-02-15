@@ -29,18 +29,27 @@ void Grid::Remove(std::shared_ptr<GameObject> obj) {
     cells_[row][col].Insert(obj);
 }
 
-void Grid::Update(std::shared_ptr<GameObject> obj, double old_x, double old_y) {
+void Grid::Update(std::shared_ptr<GameObject> obj, double old_x, double old_y, long long current_time) {
     int old_row = static_cast<int>(old_y) / cell_size_;
     int old_col = static_cast<int>(old_x) / cell_size_;
-    int new_row = static_cast<int>(obj->get_y()) / cell_size_;
-    int new_col = static_cast<int>(obj->get_x()) / cell_size_;
+    int cur_y = static_cast<int>(obj->get_cur_y(current_time));
+    int cur_x = static_cast<int>(obj->get_cur_x(current_time));
+    int new_row = cur_y / cell_size_;
+    int new_col = cur_x / cell_size_;
+
+    if (new_row < 0 || new_col < 0 || new_row >= rows_ || new_col >= cols_) return; 
 
     if (old_row != new_row || old_col != new_col) {
         obj->set_row(new_row);
         obj->set_col(new_col);
+        obj->set_x(cur_x);
+        obj->set_y(cur_y);
+        obj->set_life_length(obj->get_life_length() - (current_time - obj->get_time_update()));
+        obj->set_time_update(current_time);
+
         cells_[old_row][old_col].Remove(obj);
         cells_[new_row][new_col].Insert(obj);
-        std::cout << "Insert in " << new_row << " row " << new_col << " col\n";
+        // std::cout << "Insert in " << new_row << " row " << new_col << " col\n";
     }
 }
 

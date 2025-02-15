@@ -1,11 +1,22 @@
 {
-    "activeFile": "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/tiny-ski.tmx",
+    "activeFile": "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/small-ski.tmx",
     "expandedProjectPaths": [
         "kenney_tiny-ski",
         "kenney_tiny-ski/Tiled",
         "."
     ],
     "fileStates": {
+        "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/small-ski.tmx": {
+            "scale": 0.1409,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 5330.021291696238,
+                "y": 4091.5542938254075
+            }
+        },
+        "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/small-ski.tmx#tiny-ski": {
+            "scaleInDock": 1.4851
+        },
         "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/tiny-ski.tmx": {
             "scale": 0.1409,
             "selectedLayer": 0,
@@ -41,11 +52,13 @@
     },
     "last.exportedFilePath": "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets",
     "map.lastUsedExportFilter": "JSON map files (*.tmj *.json)",
+    "map.lastUsedFormat": "tmx",
     "openFiles": [
-        "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/tiny-ski.tmx"
+        "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/small-ski.tmx"
     ],
     "project": "",
     "recentFiles": [
+        "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/small-ski.tmx",
         "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/tiny-ski.tmx",
         "map.tmj",
         "kenney_tiny-ski/Tiled/sampleMap.tmx",

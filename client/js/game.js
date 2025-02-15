@@ -7,17 +7,17 @@ import { sendPositionUpdate, handleServerMessage } from "./network.js";
 export class GameScene extends Phaser.Scene {
   constructor() {
     super({ key: "GameScene" });
+    this.serverTimeOffset = 0; // Initial offset is 0
   }
 
   preload() {
     this.load.image("tiles", "assets/tiny-ski.png");
-    this.load.tilemapTiledJSON("map", "assets/tiny-ski.tmj");
+    this.load.tilemapTiledJSON("map", "assets/small-ski.tmj");
   }
 
   create() {
     this.registry.set("PLAYER_SPEED", PLAYER_SPEED);
 
-    // Create the map.
     const map = this.make.tilemap({ key: "map" });
     const tileset = map.addTilesetImage("tiny-ski", "tiles");
     map.createLayer("Ground", tileset);
@@ -30,44 +30,46 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
     this.cameras.main.roundPixels = true;
 
-    // Create the player.
     const spawnMargin = 20;
     const randomX = Phaser.Math.Between(spawnMargin, this.mapWidth - spawnMargin);
     const randomY = Phaser.Math.Between(spawnMargin, this.mapHeight - spawnMargin);
     const player = createPlayer(this, randomX, randomY);
-    player.id = Date.now().toString();
+    player.id = crypto.randomUUID();
     this.cameras.main.startFollow(player.container, true);
 
-    // Save references.
     this.player = player;
     this.players = {};
     this.isAlive = true;
     this.currentHealth = 100;
 
-    // Setup keyboard input.
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
     this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
     this.keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
 
-    // Create the physics group for snowballs.
     this.snowballs = this.physics.add.group();
 
-    // Connect to the server.
     this.socket = new WebSocket("ws://localhost:12345");
     this.socket.onopen = () => {
       console.log("Connected to server");
-      // Send initial join message.
+      // Send join message.
       this.socket.send(JSON.stringify({
         type: "join",
         id: this.player.id,
         position: { x: this.player.container.x, y: this.player.container.y }
       }));
+      // Start periodic ping every 5 seconds.
+      this.pingInterval = setInterval(() => {
+        const pingMsg = {
+          type: "ping",
+          clientTime: Date.now()
+        };
+        this.socket.send(JSON.stringify(pingMsg));
+      }, 5000);
     };
     this.socket.onmessage = handleServerMessage.bind(this);
 
-    // Input for charging/firing.
     this.input.on("pointerdown", this.startCharging, this);
     this.input.on("pointerup", this.fireSnowball, this);
 
@@ -76,7 +78,6 @@ export class GameScene extends Phaser.Scene {
 
   update() {
     if (!this.isAlive) return;
-
     const { velocityX, velocityY } = updateMovement(
       this,
       this.cursors,
@@ -87,7 +88,6 @@ export class GameScene extends Phaser.Scene {
       this.player
     );
     sendPositionUpdate(this, this.socket, this.player, velocityX, velocityY);
-
     updateChargingIndicator(this, this.player, this.chargeStartTime, this.isCharging);
   }
 
@@ -124,20 +124,24 @@ export class GameScene extends Phaser.Scene {
     const fireX = this.player.container.x + (this.player.chargingSnowball.x - this.player.container.x);
     const fireY = this.player.container.y + (this.player.chargingSnowball.y - this.player.container.y);
 
-    // Send a unified movement update for the fired snowball.
+    const snowballId = `snowball_${this.player.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
     if (this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({
         type: "movement",
         objectType: "snowball",
-        id: "local_" + Date.now(),
+        id: snowballId,
         position: { x: fireX, y: fireY },
         velocity: { x: direction.x * SNOWBALL_SPEED, y: direction.y * SNOWBALL_SPEED },
         size: finalRadius,
+        timeEmission: Date.now() + (this.serverTimeOffset || 0),
+        lifeLength: 3000
       }));
     }
-    const localSnowball = createSnowball(this, fireX, fireY, finalRadius);
-    localSnowball.id = "local_" + Date.now();
-    localSnowball.body.setVelocity(direction.x * SNOWBALL_SPEED, direction.y * SNOWBALL_SPEED);
+
+    // const localSnowball = createSnowball(this, fireX, fireY, finalRadius);
+    // localSnowball.id = snowballId;
+    // localSnowball.body.setVelocity(direction.x * SNOWBALL_SPEED, direction.y * SNOWBALL_SPEED);
     this.player.chargingSnowball.destroy();
     this.player.chargingSnowball = null;
     this.isCharging = false;

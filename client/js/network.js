@@ -1,5 +1,4 @@
 import { updateGameObject } from "./updater.js";
-// Import other necessary functions like handleHit, etc.
 
 export function sendPositionUpdate(scene, socket, player, velocityX, velocityY) {
   if (!scene.lastSentPosition) {
@@ -8,15 +7,15 @@ export function sendPositionUpdate(scene, socket, player, velocityX, velocityY) 
   const posChanged =
     Math.abs(player.container.x - scene.lastSentPosition.x) > 0.5 ||
     Math.abs(player.container.y - scene.lastSentPosition.y) > 0.5;
+
   if (posChanged && socket.readyState === WebSocket.OPEN) {
-    // Send a unified "movement" message for the player.
     const updateMsg = {
       type: "movement",
       objectType: "player",
       id: player.id,
       position: { x: player.container.x, y: player.container.y },
       velocity: { x: velocityX, y: velocityY },
-      t: Date.now(),
+      t: Date.now() + (scene.serverTimeOffset || 0),
     };
     socket.send(JSON.stringify(updateMsg));
     scene.lastSentPosition = { x: player.container.x, y: player.container.y };
@@ -26,9 +25,19 @@ export function sendPositionUpdate(scene, socket, player, velocityX, velocityY) 
 export function handleServerMessage(event) {
   const data = JSON.parse(event.data);
   switch (data.type) {
+    case "pong": {
+      // Calculate round-trip time (RTT) and offset.
+      const T3 = Date.now();
+      const T1 = data.clientTime;
+      const T2 = data.serverTime;
+      const rtt = T3 - T1;
+      const offset = T2 - (T1 + rtt / 2);
+      // Store the offset in the scene.
+      this.serverTimeOffset = offset;
+      console.log("Calculated server time offset:", offset);
+      break;
+    }
     case "movement":
-      // Use the unified update function.
-      console.log("hi");  
       updateGameObject(this, data);
       break;
     case "hit":
