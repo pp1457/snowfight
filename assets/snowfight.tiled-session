@@ -1,17 +1,17 @@
 {
     "activeFile": "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/small-ski.tmx",
     "expandedProjectPaths": [
-        "kenney_tiny-ski",
+        ".",
         "kenney_tiny-ski/Tiled",
-        "."
+        "kenney_tiny-ski"
     ],
     "fileStates": {
         "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/small-ski.tmx": {
-            "scale": 0.1409,
-            "selectedLayer": 0,
+            "scale": 0.5518,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 5330.021291696238,
-                "y": 4091.5542938254075
+                "x": 1250.4530627038785,
+                "y": 1459.7680318956143
             }
         },
         "/Users/liaoyunyang/Projects/Game/IO/snowfight/client/assets/small-ski.tmx#tiny-ski": {
