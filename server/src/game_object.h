@@ -1,6 +1,7 @@
 #ifndef GAME_OBJECT_H
 #define GAME_OBJECT_H
 
+#include <algorithm>
 #include <string>
 #include <chrono>
 #include <memory>
@@ -18,7 +19,7 @@ struct PointerToPlayer {
 class GameObject {
     std::string type_, id_;
     double x_, y_, vx_, vy_, size_;
-    int row_, col_;
+    int row_, col_, health_, damage_;
     long long time_update_; // Time when the object was emitted
     long long life_length_;  // Lifespan of the object in milliseconds
 
@@ -43,6 +44,8 @@ public:
     double get_size() const { return size_; }
     int get_row() const { return row_; }
     int get_col() const { return col_; }
+    int get_health() const { return health_; }
+    int get_damage() const { return damage_; }
     long long get_time_update() const { return time_update_; }
     long long get_life_length() const { return life_length_; }
 
@@ -55,6 +58,8 @@ public:
     void set_size(double size) { size_ = size; }
     void set_row(int row) { row_ = row; }
     void set_col(int col) { col_ = col; }
+    void set_health(int health) { health_ =  health; }
+    void set_damage(int damage) { damage_ =  damage; }
     void set_time_update(long long time_update) { time_update_ = time_update; }
     void set_life_length(long long life_length) { life_length_ = life_length; }
 
@@ -65,7 +70,22 @@ public:
     }
 
     bool Collide(std::shared_ptr<GameObject> obj) {
+        auto now = std::chrono::system_clock::now();
+        auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now.time_since_epoch()).count();
+        double x_diff = obj->get_cur_x(current_time) - get_cur_x(current_time);
+        double y_diff = obj->get_cur_y(current_time) - get_cur_y(current_time);
+        double distance_square = x_diff * x_diff + y_diff * y_diff;
+        double size_sum = obj->get_size() + get_size();
+        if (distance_square < (size_sum * size_sum)) {
+            set_life_length(-1);
+            return true;
+        }
         return false;
+    }
+
+    void Hurt(int damage) {
+        set_health(std::max(get_health() - damage, 0));
     }
 
     // Non-template version of SendMovementToClient
@@ -73,10 +93,25 @@ public:
         json data = {
             {"id", get_id()},
             {"type", "movement"},
-            {"objectType", type_},
+            {"objectType", get_type()},
             {"position", {{"x", get_cur_x(0)}, {"y", get_cur_y(0)}}},
-            {"velocity", {{"x", vx_}, {"y", vy_}}},
-            {"size", size_}
+            {"velocity", {{"x", get_vx()}, {"y", get_vy()}}}, 
+            {"size", get_size()},
+            {"newHealth", get_health()}
+        };
+
+        ws->send(data.dump(), uWS::OpCode::TEXT);
+    }
+
+    virtual void SendStatusToClient(uWS::WebSocket<false, true, PointerToPlayer> *ws) {
+        json data = {
+            {"id", get_id()},
+            {"type", "hit"},
+            {"objectType", get_type()},
+            {"position", {{"x", get_cur_x(0)}, {"y", get_cur_y(0)}}},
+            {"velocity", {{"x", get_vx()}, {"y", get_vy()}}}, 
+            {"size", get_size()},
+            {"newHealth", get_health()}
         };
 
         ws->send(data.dump(), uWS::OpCode::TEXT);
@@ -87,9 +122,23 @@ class Player : public GameObject {
 };
 
 class Snowball : public GameObject {
+private:
+    bool charging_;
 public:
+    bool get_charging() { return charging_; }
+    void set_charging(bool charging) { charging_ = charging; }
     Snowball(const std::string& id, const std::string& type)
             : GameObject(id, type) {}
+
+    double get_cur_x(long long current_time) const override {
+        long long elapsed_time = current_time - get_time_update();
+        return get_x() + get_vx() * (elapsed_time / 1000.0);
+    }
+
+    double get_cur_y(long long current_time) const override {
+        long long elapsed_time = current_time - get_time_update();
+        return get_y() + get_vy() * (elapsed_time / 1000.0);
+    }
 
     // Override the non-template SendMovementToClient
     void SendMovementToClient(uWS::WebSocket<false, true, PointerToPlayer> *ws) override {
@@ -102,21 +151,14 @@ public:
             {"objectType", get_type()},
             {"position", {{"x", get_cur_x(current_time)}, {"y", get_cur_y(current_time)}}},
             {"velocity", {{"x", get_vx()}, {"y", get_vy()}}},
-            {"size", get_size()}
+            {"size", get_size()},
+            {"charging", get_charging()},
+            {"deathDate", current_time + get_life_length()}
         };
 
         ws->send(data.dump(), uWS::OpCode::TEXT);
     }
 
-    double get_cur_x(long long current_time) const override {
-        long long elapsed_time = current_time - get_time_update();
-        return get_x() + get_vx() * (elapsed_time / 1000.0);
-    }
-
-    double get_cur_y(long long current_time) const override {
-        long long elapsed_time = current_time - get_time_update();
-        return get_y() + get_vy() * (elapsed_time / 1000.0);
-    }
 };
 
 #endif

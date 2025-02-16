@@ -17,7 +17,7 @@ using json = nlohmann::json;
 Grid *grid = nullptr;
 
 thread_local std::unordered_set<uWS::WebSocket<false, true, PointerToPlayer>*> thread_clients;
-thread_local std::unordered_set<std::shared_ptr<GameObject>> thread_objects;
+thread_local std::unordered_map<std::string, std::shared_ptr<GameObject>> thread_objects;
 
 void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
     json message = json::parse(str_message);
@@ -47,38 +47,114 @@ void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
     auto player_ptr = ws->getUserData()->player;  // shared_ptr<Player>
     
     if (type == "join") {
-        player_ptr->set_id(message["id"].get<std::string>());
-        player_ptr->set_x(message["position"]["x"].get<double>());
-        player_ptr->set_y(message["position"]["y"].get<double>());
+        player_ptr->set_id(message.contains("id") ? message["id"].get<std::string>() : "unknown");
+
+        int default_health = 100;
+        double default_x = 0.0, default_y = 0.0;
+
+        if (message.contains("position") && message["position"].contains("x") && message["position"].contains("y")) {
+            default_x = message["position"]["x"].get<double>();
+            default_y = message["position"]["y"].get<double>();
+        }
+
+        if (message.contains("health")) {
+            default_health = message["health"].get<int>();
+        }
+
+        player_ptr->set_health(default_health);
+        player_ptr->set_x(default_x);
+        player_ptr->set_y(default_y);
         grid->Insert(player_ptr);
+
     } else if (type == "movement") {
-        if (message["objectType"] == "player") {
+        if (message.contains("objectType") && message["objectType"] == "player") {
             double old_x = player_ptr->get_x();
             double old_y = player_ptr->get_y();
-            player_ptr->set_x(message["position"]["x"].get<double>());
-            player_ptr->set_y(message["position"]["y"].get<double>());
+
+            double new_x = old_x, new_y = old_y;
+            if (message.contains("position")) {
+                new_x = message["position"].contains("x") ? message["position"]["x"].get<double>() : old_x;
+                new_y = message["position"].contains("y") ? message["position"]["y"].get<double>() : old_y;
+            }
+            
+            player_ptr->set_x(new_x);
+            player_ptr->set_y(new_y);
             grid->Update(player_ptr, old_x, old_y, 0);
-        } else if (message["objectType"] == "snowball") {
-            std::shared_ptr snowball_ptr = std::make_shared<Snowball>(message["id"], "snowball");
-            thread_objects.insert(snowball_ptr);
-            snowball_ptr->set_x(message["position"]["x"].get<double>());
-            snowball_ptr->set_y(message["position"]["y"].get<double>());
-            snowball_ptr->set_vx(message["velocity"]["x"].get<double>());
-            snowball_ptr->set_vy(message["velocity"]["y"].get<double>());
-            snowball_ptr->set_size(message["size"].get<double>());
-            snowball_ptr->set_time_update(message["timeEmission"].get<long long>());
-            snowball_ptr->set_life_length(message["lifeLength"].get<long long>());
-            grid->Insert(snowball_ptr);
+        } else if (message.contains("objectType") && message["objectType"] == "snowball") {
+
+            bool is_new = false;
+
+            std::string snowball_id = message.contains("id") ? message["id"].get<std::string>() : "unknown";
+            std::shared_ptr<Snowball> snowball_ptr;
+
+            if (!thread_objects.count(snowball_id)) {
+                snowball_ptr = std::make_shared<Snowball>(snowball_id, "snowball");
+                thread_objects[snowball_id] = snowball_ptr;
+                is_new = true;
+            } else {
+                snowball_ptr = std::static_pointer_cast<Snowball>(thread_objects[snowball_id]);
+            }
+
+            std::cout << "thread_object's size: " << thread_objects.size() << std::endl;
+
+            double default_x = 0.0, default_y = 0.0, default_vx = 0.0, default_vy = 0.0, default_size = 1.0;
+            long long default_time_update = 0, default_life_length = 4e18;
+            int default_damage = 5;
+            bool default_charging = false;
+
+            if (message.contains("position")) {
+                default_x = message["position"].contains("x") ? message["position"]["x"].get<double>() : default_x;
+                default_y = message["position"].contains("y") ? message["position"]["y"].get<double>() : default_y;
+            }
+
+            if (message.contains("velocity")) {
+                default_vx = message["velocity"].contains("x") ? message["velocity"]["x"].get<double>() : default_vx;
+                default_vy = message["velocity"].contains("y") ? message["velocity"]["y"].get<double>() : default_vy;
+            }
+
+            if (message.contains("size")) {
+                default_size = message["size"].get<double>();
+            }
+
+            if (message.contains("timeEmission")) {
+                default_time_update = message["timeEmission"].get<long long>();
+            }
+
+            if (message.contains("lifeLength")) {
+                default_life_length = message["lifeLength"].get<long long>();
+            }
+
+            if (message.contains("charging")) {
+                default_charging = message["charging"].get<bool>();
+            }
+
+            if (message.contains("damage")) {
+                default_damage = message["damage"].get<int>();
+            }
+
+            snowball_ptr->set_x(default_x);
+            snowball_ptr->set_y(default_y);
+            snowball_ptr->set_vx(default_vx);
+            snowball_ptr->set_vy(default_vy);
+            snowball_ptr->set_size(default_size);
+            snowball_ptr->set_time_update(default_time_update);
+            snowball_ptr->set_life_length(default_life_length);
+            snowball_ptr->set_charging(default_charging);
+            snowball_ptr->set_damage(default_damage);
+
+            if (is_new) {
+                grid->Insert(snowball_ptr);
+            } 
         }
     }
 }
 
 void UpdatePlayerView(auto *ws) {
     auto player_ptr = ws->getUserData()->player;
-    double lower_y = player_ptr->get_y() - (constants::FIXED_VIEW_HEIGHT / 2);
-    double upper_y = lower_y + constants::FIXED_VIEW_HEIGHT;
-    double left_x = player_ptr->get_x() - (constants::FIXED_VIEW_WIDTH / 2);
-    double right_x = left_x + constants::FIXED_VIEW_WIDTH;
+    double lower_y = player_ptr->get_y() - (constants::FIXED_VIEW_HEIGHT);
+    double upper_y = lower_y + 2 * constants::FIXED_VIEW_HEIGHT;
+    double left_x = player_ptr->get_x() - (constants::FIXED_VIEW_WIDTH);
+    double right_x = left_x + 2 * constants::FIXED_VIEW_WIDTH;
     
     std::vector<std::shared_ptr<GameObject>> neighbors = grid->Search(lower_y, upper_y, left_x, right_x);
      
@@ -86,6 +162,11 @@ void UpdatePlayerView(auto *ws) {
         if (obj->get_id() != player_ptr->get_id()) {
             if (!obj->Collide(player_ptr)) {
                 obj->SendMovementToClient(ws);
+            } else {
+                std::cout << "HIT" << std::endl;
+                player_ptr->Hurt(obj->get_damage());
+                std::cout << "NewHealth: " << player_ptr->get_health() << std::endl;
+                player_ptr->SendStatusToClient(ws);
             }
         }
     }
@@ -104,6 +185,7 @@ void StartServer(int port) {
                 HandleMessage(ws, message, opCode);
             },
             .close = [](auto *ws, int code, std::string_view message) {
+                grid->Remove(ws->getUserData()->player);
                 thread_clients.erase(ws);
                 std::cout << "Client disconnected!" << std::endl;
             }
@@ -131,17 +213,19 @@ void StartServer(int port) {
         // Create a copy of the set to avoid iterator invalidation
         auto objects_copy = thread_objects;
         
-        for (const auto& obj : objects_copy) {
+        for (auto &[id, obj] : objects_copy) {
             if (obj) {  // Check if the pointer is valid
                 // Check if object should be removed (e.g., snowball lifetime expired)
                 auto now = std::chrono::system_clock::now();
                 auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                     now.time_since_epoch()).count();
                     
-                if (obj->get_time_update() + obj->get_life_length() < current_time) {
-                    thread_objects.erase(obj);
+                if (obj->Expired(current_time)) {
+                    grid->Remove(obj);
+                    thread_objects.erase(id);
                     continue;
                 }
+
                 grid->Update(obj, obj->get_x(), obj->get_y(), current_time);
             }
         }
