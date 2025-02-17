@@ -1,6 +1,6 @@
 export const PLAYER_SPEED = 200;
 export const CHARGE_MAX_TIME = 2000;
-export const INITIAL_SNOWBALL_RADIUS = 5;
+export const INITIAL_SNOWBALL_RADIUS = 10;
 export const MAX_SNOWBALL_RADIUS = 20;
 export const CHARGE_OFFSET_DISTANCE = 30;
 export const PLAYER_RADIUS = 20;

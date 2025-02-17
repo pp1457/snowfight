@@ -43,6 +43,7 @@ void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
         ws->send(pongMsg.dump(), opCode);
         return;
     }
+
     // Handle join and movement messages as before.
     auto player_ptr = ws->getUserData()->player;  // shared_ptr<Player>
     
@@ -50,20 +51,21 @@ void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
         player_ptr->set_id(message.contains("id") ? message["id"].get<std::string>() : "unknown");
 
         int default_health = 100;
-        double default_x = 0.0, default_y = 0.0;
+        double default_x = 0.0, default_y = 0.0, default_size = 20;
 
         if (message.contains("position") && message["position"].contains("x") && message["position"].contains("y")) {
             default_x = message["position"]["x"].get<double>();
             default_y = message["position"]["y"].get<double>();
         }
 
-        if (message.contains("health")) {
-            default_health = message["health"].get<int>();
-        }
+        if (message.contains("health")) default_health = message["health"].get<int>();
+        if (message.contains("size")) default_health = message["size"].get<int>();
 
         player_ptr->set_health(default_health);
         player_ptr->set_x(default_x);
         player_ptr->set_y(default_y);
+        player_ptr->set_size(default_size);
+
         grid->Insert(player_ptr);
 
     } else if (type == "movement") {
@@ -72,13 +74,14 @@ void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
             double old_y = player_ptr->get_y();
 
             double new_x = old_x, new_y = old_y;
-            if (message.contains("position")) {
-                new_x = message["position"].contains("x") ? message["position"]["x"].get<double>() : old_x;
-                new_y = message["position"].contains("y") ? message["position"]["y"].get<double>() : old_y;
+            if (message.contains("position") && message["position"].contains("x") && message["position"].contains("y")) {
+                new_x = message["position"]["x"].get<double>();
+                new_y = message["position"]["y"].get<double>();
             }
             
             player_ptr->set_x(new_x);
             player_ptr->set_y(new_y);
+
             grid->Update(player_ptr, old_x, old_y, 0);
         } else if (message.contains("objectType") && message["objectType"] == "snowball") {
 
@@ -102,35 +105,21 @@ void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
             int default_damage = 5;
             bool default_charging = false;
 
-            if (message.contains("position")) {
-                default_x = message["position"].contains("x") ? message["position"]["x"].get<double>() : default_x;
-                default_y = message["position"].contains("y") ? message["position"]["y"].get<double>() : default_y;
+            if (message.contains("position") && message["position"].contains("x") && message["position"].contains("y")) {
+                default_x = message["position"]["x"].get<double>();
+                default_y = message["position"]["y"].get<double>();
             }
 
-            if (message.contains("velocity")) {
-                default_vx = message["velocity"].contains("x") ? message["velocity"]["x"].get<double>() : default_vx;
-                default_vy = message["velocity"].contains("y") ? message["velocity"]["y"].get<double>() : default_vy;
+            if (message.contains("velocity") && message["velocity"].contains("x") && message["velocity"].contains("y")) {
+                default_vx = message["velocity"]["x"].get<double>();
+                default_vy = message["velocity"]["y"].get<double>();
             }
 
-            if (message.contains("size")) {
-                default_size = message["size"].get<double>();
-            }
-
-            if (message.contains("timeEmission")) {
-                default_time_update = message["timeEmission"].get<long long>();
-            }
-
-            if (message.contains("lifeLength")) {
-                default_life_length = message["lifeLength"].get<long long>();
-            }
-
-            if (message.contains("charging")) {
-                default_charging = message["charging"].get<bool>();
-            }
-
-            if (message.contains("damage")) {
-                default_damage = message["damage"].get<int>();
-            }
+            if (message.contains("size")) default_size = message["size"].get<double>();
+            if (message.contains("timeEmission")) default_time_update = message["timeEmission"].get<long long>();
+            if (message.contains("lifeLength")) default_life_length = message["lifeLength"].get<long long>();
+            if (message.contains("charging")) default_charging = message["charging"].get<bool>();
+            if (message.contains("damage")) default_damage = message["damage"].get<int>();
 
             snowball_ptr->set_x(default_x);
             snowball_ptr->set_y(default_y);
@@ -149,6 +138,18 @@ void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
     }
 }
 
+std::string ExtractPlayerId(const std::string& snowballId) {
+    size_t firstUnderscore = snowballId.find('_');
+    size_t secondUnderscore = snowballId.find('_', firstUnderscore + 1);
+
+    if (firstUnderscore == std::string::npos || secondUnderscore == std::string::npos) {
+        return "not_snowball";
+        // throw std::invalid_argument("Invalid snowball ID format");
+    }
+
+    return snowballId.substr(firstUnderscore + 1, secondUnderscore - firstUnderscore - 1);
+}
+
 void UpdatePlayerView(auto *ws) {
     auto player_ptr = ws->getUserData()->player;
     double lower_y = player_ptr->get_y() - (constants::FIXED_VIEW_HEIGHT);
@@ -160,13 +161,13 @@ void UpdatePlayerView(auto *ws) {
      
     for (auto obj : neighbors) {
         if (obj->get_id() != player_ptr->get_id()) {
-            if (!obj->Collide(player_ptr)) {
-                obj->SendMovementToClient(ws);
-            } else {
+            if (obj->get_type() == "snowball" && ExtractPlayerId(obj->get_id()) != player_ptr->get_id() && obj->Collide(player_ptr)) {
                 std::cout << "HIT" << std::endl;
                 player_ptr->Hurt(obj->get_damage());
                 std::cout << "NewHealth: " << player_ptr->get_health() << std::endl;
                 player_ptr->SendStatusToClient(ws);
+            } else {
+                obj->SendMovementToClient(ws);
             }
         }
     }

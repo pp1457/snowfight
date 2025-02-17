@@ -70,6 +70,7 @@ public:
     }
 
     bool Collide(std::shared_ptr<GameObject> obj) {
+        if (get_life_length() < 0) return false;
         auto now = std::chrono::system_clock::now();
         auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
             now.time_since_epoch()).count();
@@ -85,6 +86,7 @@ public:
     }
 
     void Hurt(int damage) {
+        std::cout << "Ahhhhh!\n";
         set_health(std::max(get_health() - damage, 0));
     }
 
