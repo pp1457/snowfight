@@ -9,7 +9,8 @@ import {
     FIXED_VIEW_HEIGHT
 } from "./constants.js";
 import { createPlayer } from "./player.js";
-import { createSnowball, checkAlive } from "./snowball.js";
+import { createSnowball} from "./snowball.js";
+import { checkAlive} from "./updater.js";
 import { updateMovement, updateChargingIndicator } from "./input.js";
 import { sendPositionUpdate, handleServerMessage } from "./network.js";
 

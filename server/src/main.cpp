@@ -36,7 +36,7 @@ void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
 
         // Build and send the pong message.
         json pongMsg = {
-            {"type", "pong"},
+            {"messageType", "pong"},
             {"serverTime", serverTime},
             {"clientTime", clientTime}
         };
@@ -150,24 +150,23 @@ std::string ExtractPlayerId(const std::string& snowballId) {
     return snowballId.substr(firstUnderscore + 1, secondUnderscore - firstUnderscore - 1);
 }
 
-void UpdatePlayerView(auto *ws) {
-    auto player_ptr = ws->getUserData()->player;
+void UpdatePlayerView(auto *ws, auto player_ptr) {
+
     double lower_y = player_ptr->get_y() - (constants::FIXED_VIEW_HEIGHT);
     double upper_y = lower_y + 2 * constants::FIXED_VIEW_HEIGHT;
     double left_x = player_ptr->get_x() - (constants::FIXED_VIEW_WIDTH);
     double right_x = left_x + 2 * constants::FIXED_VIEW_WIDTH;
     
     std::vector<std::shared_ptr<GameObject>> neighbors = grid->Search(lower_y, upper_y, left_x, right_x);
+
      
     for (auto obj : neighbors) {
         if (obj->get_id() != player_ptr->get_id()) {
             if (obj->get_type() == "snowball" && ExtractPlayerId(obj->get_id()) != player_ptr->get_id() && obj->Collide(player_ptr)) {
-                std::cout << "HIT" << std::endl;
                 player_ptr->Hurt(obj->get_damage());
-                std::cout << "NewHealth: " << player_ptr->get_health() << std::endl;
-                player_ptr->SendStatusToClient(ws);
+                player_ptr->SendMessageToClient(ws, "hit");
             } else {
-                obj->SendMovementToClient(ws);
+                obj->SendMessageToClient(ws, "movement");
             }
         }
     }
@@ -202,8 +201,16 @@ void StartServer(int port) {
     struct us_timer_t *playerTimer = us_create_timer(loop, 0, 0);
 
     us_timer_set(playerTimer, [](struct us_timer_t * /*t*/) {
-        for (auto *ws : thread_clients) {
-            UpdatePlayerView(ws);
+    
+        auto clients_copy = thread_clients;
+        for (auto *ws : clients_copy) {
+            auto player_ptr = ws->getUserData()->player;
+            if (player_ptr->get_is_dead()) {
+                grid->Remove(player_ptr);
+                thread_clients.erase(ws);
+                return;
+            }
+            UpdatePlayerView(ws, player_ptr);
         }
     }, 20, 10);
 
@@ -221,13 +228,14 @@ void StartServer(int port) {
                 auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                     now.time_since_epoch()).count();
                     
-                if (obj->Expired(current_time)) {
-                    grid->Remove(obj);
+                if (obj->get_is_dead()) {
                     thread_objects.erase(id);
-                    continue;
+                } else if (obj->Expired(current_time)) {
+                    thread_objects.erase(id);
+                    grid->Remove(obj);
+                } else {
+                    grid->Update(obj, obj->get_x(), obj->get_y(), current_time);
                 }
-
-                grid->Update(obj, obj->get_x(), obj->get_y(), current_time);
             }
         }
     }, 250, 10);

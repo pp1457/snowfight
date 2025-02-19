@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phaser Game with HTML Scoreboard</title>
+  <!-- Redirect to login if not authenticated -->
+  <script>
+    if (localStorage.getItem('loggedIn') !== 'true') {
+      window.location.href = 'login.html';
+    }
+  </script>
   <!-- Load Phaser from CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.87.0/phaser.js"></script>
   <style>

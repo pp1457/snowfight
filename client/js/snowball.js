@@ -16,12 +16,3 @@ export function updateSnowballFromServer(snowball, updateData) {
     snowball.lastKnownPosition = { x: updateData.x, y: updateData.y };
 }
 
-export function checkAlive(scene) {
-    const currentTime = Date.now();
-    scene.snowballs.getChildren().forEach(snowball => {
-        if (snowball.deathDate && currentTime > snowball.deathDate) {
-            snowball.destroy();
-            scene.snowballs.remove(snowball);
-        }
-    });
-}

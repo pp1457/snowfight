@@ -24,8 +24,8 @@ export function sendPositionUpdate(scene, socket, player, velocityX, velocityY) 
 
 export function handleServerMessage(event) {
     const data = JSON.parse(event.data);
-    console.log("Received: ", data);
-    switch (data.type) {
+    // console.log("Received: ", data);
+    switch (data.messageType) {
         case "pong": {
             // Calculate round-trip time (RTT) and offset.
             const T3 = Date.now();
@@ -36,10 +36,9 @@ export function handleServerMessage(event) {
             // Store the offset in the scene.
             this.serverTimeOffset = offset;
             console.log("Calculated server time offset:", offset);
-            break;
+            return;
         }
         case "movement":
-            updateGameObject(this, data);
             break;
         case "hit":
             handleHit(this, data);
@@ -53,12 +52,11 @@ export function handleServerMessage(event) {
         default:
             console.warn("Unknown message type:", data.type);
     }
+    updateGameObject(this, data);
 }
 
 function handleHit(scene, data) {
-    console.log("HIT!!!");
     if (data.id === scene.player.id) {
-        console.log("ME!!!");
         scene.player.updateHealth(data.newHealth);
         scene.cameras.main.shake(100, 0.01);
     }
