@@ -8,8 +8,9 @@
 #include "nlohmann/json.hpp"
 
 #include "grid.h"
-#include "game_object.h"    // Assumed to contain Player & Grid definitions
+#include "game_object.h"
 #include "constants.h"
+
 
 using json = nlohmann::json;
 
@@ -31,8 +32,7 @@ void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
 
         // Get the server's current time.
         auto now = std::chrono::system_clock::now();
-        auto serverTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-                              now.time_since_epoch()).count();
+        auto serverTime = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 
         // Build and send the pong message.
         json pongMsg = {
@@ -78,11 +78,10 @@ void HandleMessage(auto *ws, std::string_view str_message, uWS::OpCode opCode) {
                 new_x = message["position"]["x"].get<double>();
                 new_y = message["position"]["y"].get<double>();
             }
-            
             player_ptr->set_x(new_x);
             player_ptr->set_y(new_y);
 
-            grid->Update(player_ptr, old_x, old_y, 0);
+            grid->Update(player_ptr, 0);
         } else if (message.contains("objectType") && message["objectType"] == "snowball") {
 
             bool is_new = false;
@@ -184,7 +183,7 @@ void StartServer(int port) {
             .message = [](auto *ws, std::string_view message, uWS::OpCode opCode) {
                 HandleMessage(ws, message, opCode);
             },
-            .close = [](auto *ws, int code, std::string_view message) {
+            .close = [](auto *ws, int /*code*/, std::string_view /*message*/) {
                 grid->Remove(ws->getUserData()->player);
                 thread_clients.erase(ws);
                 std::cout << "Client disconnected!" << std::endl;
@@ -234,7 +233,7 @@ void StartServer(int port) {
                     thread_objects.erase(id);
                     grid->Remove(obj);
                 } else {
-                    grid->Update(obj, obj->get_x(), obj->get_y(), current_time);
+                    grid->Update(obj, current_time);
                 }
             }
         }

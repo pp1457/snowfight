@@ -12,6 +12,7 @@ export function checkAlive(scene) {
 
     Object.entries(scene.players).forEach(([id, player]) => {
         if (player.isDead || (player.expireDate && player.expireDate <= currentTime)) {
+            console.log("Someone is dead!");
             player.container.destroy(true);
             delete scene.players[id];
         }
