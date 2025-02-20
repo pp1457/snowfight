@@ -22,14 +22,14 @@ public:
         : type_("unknown"), id_("unknown"),
           x_(0), y_(0), vx_(0), vy_(0), size_(1),
           row_(0), col_(0), health_(100), damage_(5),
-          time_update_(0), life_length_(0),
+          time_update_(0), life_length_(1000),
           is_dead_(false) {}
 
     GameObject(std::string id, std::string type)
         : type_(std::move(type)), id_(std::move(id)),
           x_(0), y_(0), vx_(0), vy_(0), size_(1),
           row_(0), col_(0), health_(100), damage_(5),
-          time_update_(0), life_length_(0),
+          time_update_(0), life_length_(1000),
           is_dead_(false) {}
 
     virtual ~GameObject() = default;
