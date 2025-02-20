@@ -1,76 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Game Login</title>
+  <meta charset="UTF-8">
+  <title>Join the Snowball Battle!</title>
+  <link rel="modulepreload" href="js/game.js">
+  <link rel="modulepreload" href="js/constants.js">
+  <link rel="modulepreload" href="js/main.js">
+  <link rel="modulepreload" href="js/input.js">
+  <link rel="modulepreload" href="js/network.js">
+  <link rel="modulepreload" href="js/snowball.js">
+  <link rel="modulepreload" href="js/player.js">
+  <link rel="modulepreload" href="js/updater.js">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700&display=swap');
+
     body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(135deg, #e0f7ff, #99ccff);
       display: flex;
       align-items: center;
       justify-content: center;
       height: 100vh;
       margin: 0;
     }
+
     #login-container {
-      background: white;
+      background: rgba(255, 255, 255, 0.9);
       padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      width: 300px;
-    }
-    h2 {
+      border-radius: 16px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      width: 320px;
       text-align: center;
     }
-    input[type="text"],
-    input[type="password"] {
+
+    h2 {
+      color: #00509e;
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+
+    input[type="text"] {
       width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      padding: 12px;
+      margin: 10px 0;
+      border: 2px solid #00509e;
+      border-radius: 8px;
+      background: #e0f2ff;
+      color: #003366;
+      font-size: 16px;
+      text-align: center;
+      outline: none;
       box-sizing: border-box;
     }
-    input[type="submit"] {
+
+    input[type="text"]::placeholder {
+      color: #6699cc;
+    }
+
+    button {
       width: 100%;
-      padding: 10px;
-      background: #4caf50;
+      padding: 12px;
+      background: #00509e;
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 16px;
+      font-weight: bold;
+      transition: 0.3s;
     }
-    input[type="submit"]:hover {
-      background: #45a049;
+
+    button:hover {
+      background: #003366;
     }
   </style>
 </head>
 <body>
   <div id="login-container">
-    <h2>Login</h2>
+    <h2>Enter Your Name ❄️</h2>
     <form id="login-form">
-      <input type="text" id="username" placeholder="Username" required />
-      <input type="password" id="password" placeholder="Password" required />
-      <input type="submit" value="Login" />
+      <input type="text" id="username" placeholder="Your Snowy Name" required>
+      <button type="submit">Start Game ⛄</button>
     </form>
   </div>
   <script>
-    const loginForm = document.getElementById('login-form');
-    loginForm.addEventListener('submit', function (e) {
+    // Login form handling
+    document.getElementById('login-form').addEventListener('submit', function (e) {
       e.preventDefault();
       const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      // Dummy validation: accept any non-empty credentials.
-      if (username && password) {
-        // Save a flag in localStorage (you could also store the username)
+      if (username.trim()) {
         localStorage.setItem('loggedIn', 'true');
-        localStorage.setItem('username', username);
-        // Redirect to the game page
-        window.location.href = "index.html";
+        localStorage.setItem('playerName', username);
+        window.location.href = "index.html"; // Redirect to game page
       } else {
-        alert("Please enter valid credentials.");
+        alert("Please enter your name! ☃️");
       }
     });
   </script>

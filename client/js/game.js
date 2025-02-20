@@ -5,12 +5,15 @@ import {
     MAX_SNOWBALL_RADIUS,
     CHARGE_OFFSET_DISTANCE,
     SNOWBALL_SPEED,
+    MAX_SNOWBALL_SPEED,
+    INITIAL_SNOWBALL_DAMAGE,
+    MAX_SNOWBALL_DAMAGE,
     FIXED_VIEW_WIDTH,
     FIXED_VIEW_HEIGHT
 } from "./constants.js";
 import { createPlayer } from "./player.js";
-import { createSnowball} from "./snowball.js";
-import { checkAlive} from "./updater.js";
+import { createSnowball } from "./snowball.js";
+import { checkAlive } from "./updater.js";
 import { updateMovement, updateChargingIndicator } from "./input.js";
 import { sendPositionUpdate, handleServerMessage } from "./network.js";
 
@@ -21,8 +24,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image("tiles", "assets/tiny-ski.png");
-        this.load.tilemapTiledJSON("map", "assets/small-ski.tmj");
+        // Preload images using cache if available
+        this.load.image("tiles", localStorage.getItem("assets/tiny-ski.png") || "assets/tiny-ski.png");
+        this.load.tilemapTiledJSON("map", localStorage.getItem("assets/small-ski.tmj") || "assets/small-ski.tmj");
     }
 
     create() {
@@ -139,8 +143,8 @@ export class GameScene extends Phaser.Scene {
                 objectType: "snowball",
                 id: snowballId,
                 position: {
-                    x: this.player.container.x + direction.x * CHARGE_OFFSET_DISTANCE,
-                    y: this.player.container.y + direction.y * CHARGE_OFFSET_DISTANCE
+                    x: this.player.container.x + this.player.chargingDirection.x * CHARGE_OFFSET_DISTANCE,
+                    y: this.player.container.y + this.player.chargingDirection.y * CHARGE_OFFSET_DISTANCE
                 },
                 size: INITIAL_SNOWBALL_RADIUS,
                 charging: true
@@ -152,49 +156,46 @@ export class GameScene extends Phaser.Scene {
         if (!this.isCharging || !this.player.snowball) return;
 
         const chargeTime = this.time.now - this.chargeStartTime;
-        const finalRadius = Phaser.Math.Linear(
-            INITIAL_SNOWBALL_RADIUS,
-            MAX_SNOWBALL_RADIUS,
-            Math.min(chargeTime / CHARGE_MAX_TIME, 1)
-        );
+        const chargeFactor = Math.min(chargeTime / CHARGE_MAX_TIME, 1);
+        const finalRadius = Phaser.Math.Linear(INITIAL_SNOWBALL_RADIUS, MAX_SNOWBALL_RADIUS, chargeFactor);
+        const finalSpeed = Phaser.Math.Linear(SNOWBALL_SPEED, MAX_SNOWBALL_SPEED, chargeFactor);
+        const finalDamage = Phaser.Math.Linear(INITIAL_SNOWBALL_DAMAGE, MAX_SNOWBALL_DAMAGE, chargeFactor);
         const direction = this.player.chargingDirection || new Phaser.Math.Vector2(1, 0);
         const fireX = this.player.container.x + (this.player.snowball.x - this.player.container.x);
         const fireY = this.player.container.y + (this.player.snowball.y - this.player.container.y);
-
-        // Use the same id that was assigned when charging started.
         const snowballId = this.player.snowball.id;
 
-        // If the snowball isn’t already part of the physics simulation, enable it.
         if (!this.player.snowball.body) {
             this.physics.world.enable(this.player.snowball);
             this.snowballs.add(this.player.snowball);
         }
 
-        // Set the snowball's velocity (now that it's fired) and update its appearance.
+        // Set the snowball's velocity using the charged speed
         this.player.snowball.body.setVelocity(
-            direction.x * SNOWBALL_SPEED,
-            direction.y * SNOWBALL_SPEED
+            direction.x * finalSpeed,
+            direction.y * finalSpeed
         );
+        // Adjust the snowball's size based on charge time
         this.player.snowball.setRadius(finalRadius);
         this.player.snowball.charging = false;
-        this.player.snowball.setAlpha(1); // Change appearance if needed
+        this.player.snowball.setAlpha(1); // Update appearance if needed
 
-        // Send a message to the server with the fired state.
+        // Send the updated snowball data to the server including damage
         if (this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({
                 type: "movement",
                 objectType: "snowball",
                 id: snowballId,
                 position: { x: fireX, y: fireY },
-                velocity: { x: direction.x * SNOWBALL_SPEED, y: direction.y * SNOWBALL_SPEED },
+                velocity: { x: direction.x * finalSpeed, y: direction.y * finalSpeed },
                 size: finalRadius,
+                damage: finalDamage,
                 charging: false,
                 timeEmission: Date.now() + (this.serverTimeOffset || 0),
                 lifeLength: 3000
             }));
         }
 
-        // The local snowball becomes a fired snowball and is managed by its physics.
         this.isCharging = false;
         this.player.snowball = null;
     }
