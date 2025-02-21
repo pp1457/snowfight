@@ -1,9 +1,16 @@
 #include "grid.h"
 
+
 Grid::Grid(int height, int width, int cell_size)
     : height_(height), width_(width), cell_size_(cell_size),
       rows_((height_ - 1) / cell_size_ + 1), cols_((width_ - 1) / cell_size_ + 1),
-      cells_(rows_, std::vector<Cell>(cols_)) {}
+      cells_(rows_) {
+          for (auto &row: cells_) {
+              for (int i = 0; i < cols_; i++) {
+                  row.push_back(std::make_unique<Cell>());
+              }
+          }
+}
 
 Grid::~Grid() {}
 
@@ -16,7 +23,7 @@ void Grid::Insert(std::shared_ptr<GameObject> obj) {
     obj->set_row(row);
     obj->set_col(col);
 
-    cells_[row][col].Insert(obj);
+    cells_[row][col]->Insert(obj);
 }
 
 
@@ -26,7 +33,7 @@ void Grid::Remove(std::shared_ptr<GameObject> obj) {
 
     if (row >= rows_ || col >= cols_ || row < 0 || col < 0) return;
 
-    cells_[row][col].Remove(obj);
+    cells_[row][col]->Remove(obj);
 }
 
 void Grid::Update(std::shared_ptr<GameObject> obj, long long current_time) {
@@ -62,7 +69,8 @@ std::vector<std::shared_ptr<GameObject>> Grid::Search(double lower_y, double upp
     for (int r = lower_row; r <= upper_row; r++) {
         for (int c = left_col; c <= right_col; c++) {
             if (r >= rows_ || c >= cols_ || r < 0 || c < 0) continue;  // Boundary check
-            auto& cell_objs = cells_[r][c].objects;
+            std::shared_lock<std::shared_mutex> lock(*(cells_[r][c]->mtx));
+            auto& cell_objs = cells_[r][c]->objects;
             all.insert(all.end(), cell_objs.begin(), cell_objs.end());
         }
     }

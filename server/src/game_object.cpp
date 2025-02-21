@@ -31,10 +31,10 @@ bool GameObject::Collide(std::shared_ptr<GameObject> obj) {
 }
 
 // Applies damage to the object and marks it as dead if health reaches zero.
-void GameObject::Hurt(int damage) {
+void GameObject::Hurt(uWS::WebSocket<false, true, PointerToPlayer>* ws, int damage) {
     set_health(std::max(get_health() - damage, 0));
-    if (get_health() == 0)
-        set_is_dead(true);
+    if (get_health() == 0) { set_is_dead(true); }
+    SendMessageToClient(ws, "hit");
 }
 
 // Sends a message to the client with the object's current state.

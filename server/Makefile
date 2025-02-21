@@ -1,7 +1,8 @@
 # Compiler and flags
 CC = clang++
-CFLAGS = -Iinclude -I/usr/local/include -std=c++20 -Wall -Wextra -O2
-LDFLAGS = -L/usr/local/lib
+SANITIZER_FLAGS = -fsanitize=thread
+CFLAGS = -Iinclude -I/usr/local/include -std=c++20 -Wall -Wextra -O2 $(SANITIZER_FLAGS)
+LDFLAGS = -L/usr/local/lib $(SANITIZER_FLAGS)
 LIBS = -luSockets -lssl -lz -lcrypto -lpthread
 
 # Directories

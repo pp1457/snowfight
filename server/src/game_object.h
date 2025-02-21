@@ -21,14 +21,14 @@ public:
     GameObject()
         : type_("unknown"), id_("unknown"),
           x_(0), y_(0), vx_(0), vy_(0), size_(1),
-          row_(0), col_(0), health_(100), damage_(5),
+          row_(0), col_(0), health_(100), damage_(0),
           time_update_(0), life_length_(1000),
           is_dead_(false) {}
 
     GameObject(std::string id, std::string type)
         : type_(std::move(type)), id_(std::move(id)),
           x_(0), y_(0), vx_(0), vy_(0), size_(1),
-          row_(0), col_(0), health_(100), damage_(5),
+          row_(0), col_(0), health_(100), damage_(0),
           time_update_(0), life_length_(1000),
           is_dead_(false) {}
 
@@ -76,7 +76,7 @@ public:
     // Other member functions (implementation can be moved to a .cpp file if needed)
     bool Expired(long long current_time);
     bool Collide(std::shared_ptr<GameObject> obj);
-    void Hurt(int damage);
+    void Hurt(uWS::WebSocket<false, true, PointerToPlayer>* ws, int damage);
     virtual void SendMessageToClient(uWS::WebSocket<false, true, PointerToPlayer>* ws, std::string type);
 
 protected:

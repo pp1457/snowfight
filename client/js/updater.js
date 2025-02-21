@@ -12,11 +12,6 @@ export function checkAlive(scene) {
 
     Object.entries(scene.players).forEach(([id, player]) => {
         if (player.isDead || (player.expireDate && player.expireDate <= currentTime)) {
-            if (player.isDead) {
-                console.log("Someone is dead!");
-            } else {
-                console.log("Someone is expired!");
-            }
             player.container.destroy(true);
             delete scene.players[id];
         }
@@ -37,7 +32,7 @@ export function updateGameObject(scene, data) {
                     // Redirect back to the login page after a brief delay.
                     setTimeout(() => {
                         window.location.href = "login.html";
-                    }, 1000);
+                    }, 0);
                 }
                 return;
             }
